@@ -1,6 +1,6 @@
 # 🐾 EcoPaw - Heyvanlara Qayğı Platforması
 
-**Canlı Demo:** [https://hesenli2007.github.io/EcoPaw/](https://hesenli2007.github.io/EcoPaw/)
+**Canlı Demo:** [https://hesenli2007.github.io/EcoPaw/](https://yusifhasanlii.github.io/EcoPaw/)
 
 **EcoPaw**, sahibsiz küçə heyvanlarının qidalanması, sağlamlığı və onlara nəzarəti təmin etmək üçün hazırlanmış veb əsaslı ağıllı platformadır. Bu layihə könüllüləri, donorları və heyvansevərləri vahid mərkəzdə birləşdirir.
 
