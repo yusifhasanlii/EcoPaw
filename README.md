@@ -1,68 +1,715 @@
-🐾 EcoPaw - Heyvanlara Qayğı Platforması
-EcoPaw, sahibsiz küçə heyvanlarının qidalanması, sağlamlığı və onlara nəzarəti təmin etmək üçün hazırlanmış veb əsaslı ağıllı platformadır. Bu layihə könüllüləri, donorları və heyvansevərləri vahid mərkəzdə birləşdirir.
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EcoPaw - Sahibsiz heyvanlar üçün ağıllı qayğı və ianə platforması">
+    <title>EcoPaw | Heyvanlara Qayğı Platforması</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>">
 
-🌟 Əsas Özəlliklər
-Çoxdilli Dəstək: Azərbaycan (AZ), İngilis (EN), Türk (TR) və Rus (RU) dillərində tam interfeys tərcüməsi.
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-İstifadəçi və Könüllü Sistemi:
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-Firebase Authentication ilə qeydiyyat və giriş.
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#4ade80', 
+                            DEFAULT: '#16a34a', 
+                            dark: '#14532d',
+                        },
+                        volunteer: {
+                            light: '#fbbf24', 
+                            DEFAULT: '#d97706',
+                            dark: '#78350f',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 3s infinite',
+                    }
+                }
+            }
+        }
+    </script>
 
-Könüllü Rejimi: Könüllülər üçün xüsusi rəng mövzusu (sarı/narıncı) və tapşırıq paneli.
+    <style>
+        body { transition: background-color 0.5s ease; }
+        .volunteer-mode { --tw-bg-opacity: 1; background-color: #fffbeb; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-hover { transition: all 0.3s ease; }
+        .btn-hover:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .btn-hover:active { transform: translateY(0) scale(0.98); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
 
-Ağıllı yemləmə cihazlarının xəritəsi və statusu (yem/su bitib xəbərdarlığı).
+    <nav id="navbar" class="bg-white shadow-md sticky top-0 z-50 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <div class="flex-shrink-0 flex items-center cursor-pointer btn-hover" onclick="router('home')">
+                    <i class="fa-solid fa-paw text-green-600 text-4xl mr-2" id="logo-icon"></i>
+                    <span class="font-bold text-2xl tracking-tight text-gray-800">EcoPaw</span>
+                </div>
 
-İanə Sistemi: İstifadəçilərin layihəyə dəstək olması üçün interaktiv ianə forması.
+                <div class="hidden md:flex flex-1 mx-8 relative">
+                    <input type="text" id="searchInput" placeholder="Region axtar (məs: Xankəndi, Şuşa)..." 
+                           class="w-full border-2 border-gray-200 rounded-full py-2 px-4 pl-10 focus:outline-none focus:border-green-600 transition-all duration-300">
+                    <i class="fa-solid fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                    <div id="searchResults" class="absolute top-12 left-0 w-full bg-white shadow-lg rounded-lg hidden p-2 z-50"></div>
+                </div>
 
-Canlı Statistika: Günlük bəslənmə sayı, aktiv cihazlar və könüllü sayı.
+                <div class="hidden md:flex items-center space-x-4">
+                    <button onclick="router('home')" class="font-medium hover:text-green-600 transition px-3 py-2 rounded-lg hover:bg-green-50" data-key="nav_home">Ana Səhifə</button>
+                    <button onclick="router('donate')" class="font-medium hover:text-green-600 transition px-3 py-2 rounded-lg hover:bg-green-50" data-key="nav_donate">Bağış Et</button>
+                    <button onclick="router('volunteer')" class="font-medium hover:text-green-600 transition px-3 py-2 rounded-lg hover:bg-green-50" data-key="nav_volunteer">Könüllü Ol</button>
+                    
+                    <div class="relative group">
+                        <select id="langSelect" onchange="changeLanguage(this.value)" class="appearance-none bg-gray-100 border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-green-600 cursor-pointer font-bold transition-all hover:shadow-md text-sm uppercase">
+                            <option value="az">AZ</option>
+                            <option value="en">EN</option>
+                            <option value="tr">TR</option>
+                            <option value="ru">RU</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
 
-Ağıllı Axtarış: Regionlara (məs: Xankəndi, Şuşa, Bakı) görə cihazların axtarışı.
+                    <div id="auth-section" class="ml-2">
+                        <button onclick="router('login')" class="btn-hover bg-green-600 text-white px-6 py-2.5 rounded-full font-bold shadow-lg" data-key="nav_login">Giriş</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-Responsive Dizayn: Mobil və masaüstü cihazlar üçün tam uyğunlaşdırılmış (Tailwind CSS ilə).
+    <main id="app-content" class="min-h-screen pb-20 pt-4">
+        </main>
 
-🛠 İstifadı Olunan Texnologiyalar
-Frontend: HTML5, JavaScript (ES6 Modules)
+    <footer class="bg-gray-800 text-white py-12 mt-10 rounded-t-3xl">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+                <div class="flex items-center mb-4">
+                    <i class="fa-solid fa-paw text-green-500 text-2xl mr-2" id="footer-logo"></i>
+                    <span class="font-bold text-xl">EcoPaw</span>
+                </div>
+                <p class="text-gray-400 text-sm leading-relaxed" data-key="footer_desc">Heyvanların sağlamlığı və qidalanması üçün avtomatlaşdırılmış ağıllı platforma.</p>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg mb-4 text-green-500" data-key="footer_sponsors">Sponsorlar</h3>
+                <div class="flex space-x-4">
+                    <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center hover:bg-green-600 transition duration-300 cursor-pointer"><i class="fa-solid fa-building"></i></div>
+                    <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center hover:bg-red-500 transition duration-300 cursor-pointer"><i class="fa-solid fa-hand-holding-heart"></i></div>
+                    <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center hover:bg-green-500 transition duration-300 cursor-pointer"><i class="fa-solid fa-leaf"></i></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg mb-4 text-green-500" data-key="footer_contact">Əlaqə</h3>
+                <ul class="text-gray-400 text-sm space-y-3">
+                    <li class="flex items-center hover:text-white transition"><i class="fa-solid fa-phone mr-3 text-green-500"></i> +994 50 123 45 67</li>
+                    <li class="flex items-center hover:text-white transition"><i class="fa-solid fa-envelope mr-3 text-green-500"></i> info@ecopaw.az</li>
+                    <li class="flex items-center hover:text-white transition">
+                        <i class="fa-solid fa-location-dot mr-3 text-green-500"></i> 
+                        <span data-key="footer_address">Xankəndi şəhəri, Sülh küçəsi 5</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="text-center text-gray-500 text-xs mt-10 border-t border-gray-700 pt-6">
+            &copy; 2025 EcoPaw. All rights reserved. | <a href="https://hesenli2007.github.io/EcoPaw/" class="hover:text-white">GitHub Pages</a>
+        </div>
+    </footer>
 
-Stil (CSS): Tailwind CSS (CDN vasitəsilə)
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, updateProfile, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-İkonlar: FontAwesome
+        // --- FIREBASE CONFIG (Sənin konfiqurasiyan) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCDAWIpfQJsXoe8v49i2c5mtszI6UOU-kM",
+            authDomain: "ecopaw-abb27.firebaseapp.com",
+            projectId: "ecopaw-abb27",
+            storageBucket: "ecopaw-abb27.firebasestorage.app",
+            messagingSenderId: "355461951244",
+            appId: "1:355461951244:web:6ea07f318284f57cd76329",
+            measurementId: "G-QN5GV0ZDNB"
+        };
 
-Backend & Verilənlər Bazası: Google Firebase (Auth, Firestore)
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "ecopaw-abb27";
 
-🚀 Layihəni İşə Salmaq
-Layihəni lokal kompüterinizdə işlətmək üçün aşağıdakı addımları izləyin:
+        // --- STATE ---
+        let currentUser = null;
+        let isVolunteer = false;
+        let currentLang = 'az';
 
-1. Faylları yükləyin
-Layihəni kompüterinizə yükləyin və ya klonlayın:
+        // --- TRANSLATIONS ---
+        const translations = {
+            az: {
+                nav_home: "Ana Səhifə", nav_donate: "Bağış Et", nav_volunteer: "Könüllü Ol", nav_login: "Giriş", nav_logout: "Çıxış",
+                welcome_hero: "Küçə heyvanları üçün həyat mənbəyi", sub_hero: "Onların sağlamlığı və qidalanması bizə əmanətdir. Sən də bizə qoşul!",
+                stats_title: "Canlı Statistika", fed_today: "Bu gün bəslənən", active_machines: "Aktiv Cihazlar", news_title: "Son Xəbərlər",
+                donate_title: "Dəstək Ol", donate_desc: "Balaca dostlarımız üçün yem və su təminatına kömək et.", card_holder: "Kart Sahibi", card_number: "Kart Nömrəsi", amount: "Məbləğ (AZN)", min_amount: "Minimum 1 AZN", donate_btn: "Bağışla",
+                vol_title: "Könüllü Ol", vol_desc: "Regionundakı cihazlara nəzarət et, qəhrəman ol!", why_id: "Şəxsiyyət Vəsiqəsi niyə lazımdır?", why_id_desc: "Cihazın açarı sizə təhvil verilərkən təhlükəsizlik məqsədilə şəxsiyyət vəsiqənizi müvəqqəti olaraq səlahiyyətli şəxsə təqdim etməlisiniz.",
+                vol_form_phone: "Telefon", vol_form_address: "Ünvan", vol_form_tc: "Ş/V Seriya Nömrəsi (Fin kod)", become_vol_btn: "Könüllü Ol",
+                vol_task_title: "Könüllü Tapşırıqları", vol_task_desc: "Yaxınlığınızda yem və ya su bitən cihazlar:", accept_task: "İşi Qəbul Et", task_accepted: "Qəbul edildi!",
+                footer_desc: "Heyvanların sağlamlığı və qidalanması üçün avtomatlaşdırılmış ağıllı platforma.", footer_sponsors: "Sponsorlar", footer_contact: "Əlaqə",
+                footer_address: "Xankəndi şəhəri, Sülh küçəsi 5",
+                news_1_tag: "Region", news_1_title: "Xankəndidə yeni yemləmə cihazı", news_1_desc: "Könüllülərimizin dəstəyi ilə yeni nöqtələr aktivləşdirildi.",
+                news_2_tag: "Statistika", news_2_title: "Bu ay rekord bağış toplandı", news_2_desc: "İstifadəçilərimizin dəstəyi sayəsində qış ehtiyatı görüldü.",
+                news_3_tag: "Tədbirlər", news_3_title: "Həftəsonu könüllü görüşü", news_3_desc: "Bütün heyvansevərləri mərkəzi parka dəvət edirik.",
+                login_title: "Xoş Gəldiniz", login_tab: "Giriş", register_tab: "Qeydiyyat",
+                email_label: "Email ünvanı", pass_label: "Şifrə", name_label: "Ad və Soyad", login_btn: "Giriş Et", register_btn: "Qeydiyyatdan Keç",
+                no_account: "Hesabınız yoxdur?", has_account: "Artıq hesabınız var?", register_link: "Qeydiyyatdan keçin", login_link: "Giriş edin"
+            },
+            en: {
+                nav_home: "Home", nav_donate: "Donate", nav_volunteer: "Volunteer", nav_login: "Login", nav_logout: "Logout",
+                welcome_hero: "Lifeline for Street Animals", sub_hero: "Their health and nutrition entrusted to us. Join us!",
+                stats_title: "Live Statistics", fed_today: "Fed Today", active_machines: "Active Machines", news_title: "Latest News",
+                donate_title: "Support Us", donate_desc: "Help provide food and water.", card_holder: "Card Holder", card_number: "Card Number", amount: "Amount (AZN)", min_amount: "Minimum 1 AZN", donate_btn: "Donate",
+                vol_title: "Become a Volunteer", vol_desc: "Monitor devices in your region!", why_id: "Why ID?", why_id_desc: "For security purposes.",
+                vol_form_phone: "Phone", vol_form_address: "Address", vol_form_tc: "ID Serial Number", become_vol_btn: "Register as Volunteer",
+                vol_task_title: "Volunteer Tasks", vol_task_desc: "Devices running low:", accept_task: "Accept Task", task_accepted: "Accepted!",
+                footer_desc: "Automated smart platform for animal health.", footer_sponsors: "Sponsors", footer_contact: "Contact",
+                footer_address: "Khankendi city, Peace street 5",
+                news_1_tag: "Regional", news_1_title: "New Feeder in Khankendi", news_1_desc: "New spots activated with volunteer support.",
+                news_2_tag: "Statistics", news_2_title: "Record Donations", news_2_desc: "Winter reserves secured.",
+                news_3_tag: "Events", news_3_title: "Volunteer Meetup", news_3_desc: "Inviting all animal lovers.",
+                login_title: "Welcome Back", login_tab: "Login", register_tab: "Register",
+                email_label: "Email Address", pass_label: "Password", name_label: "Full Name", login_btn: "Login", register_btn: "Sign Up",
+                no_account: "Don't have an account?", has_account: "Already have an account?", register_link: "Sign up", login_link: "Login"
+            },
+            tr: {
+                nav_home: "Ana Sayfa", nav_donate: "Bağış Yap", nav_volunteer: "Gönüllü Ol", nav_login: "Giriş", nav_logout: "Çıkış",
+                welcome_hero: "Sokak Hayvanları için Yaşam Kaynağı", sub_hero: "Sağlıkları ve beslenmeleri bize emanet.",
+                stats_title: "Canlı İstatistikler", fed_today: "Bugün Beslenen", active_machines: "Aktif Cihazlar", news_title: "Son Haberler",
+                donate_title: "Destek Ol", donate_desc: "Mama ve su teminine yardım et.", card_holder: "Kart Sahibi", card_number: "Kart No", amount: "Tutar (AZN)", min_amount: "Min 1 AZN", donate_btn: "Bağış Yap",
+                vol_title: "Gönüllü Ol", vol_desc: "Bölgendeki cihazları kontrol et!", why_id: "Neden Kimlik?", why_id_desc: "Güvenlik nedeniyle gereklidir.",
+                vol_form_phone: "Telefon", vol_form_address: "Adres", vol_form_tc: "TC/Seri No", become_vol_btn: "Gönüllü Ol",
+                vol_task_title: "Gönüllü Görevleri", vol_task_desc: "Yakındaki boş cihazlar:", accept_task: "Kabul Et", task_accepted: "Kabul edildi!",
+                footer_desc: "Hayvan sağlığı için akıllı platform.", footer_sponsors: "Sponsorlar", footer_contact: "İletişim",
+                footer_address: "Hankendi şehri, Barış sokağı 5",
+                news_1_tag: "Bölgesel", news_1_title: "Hankendi'de Yeni Cihaz", news_1_desc: "Gönüllü desteğiyle yeni noktalar açıldı.",
+                news_2_tag: "İstatistik", news_2_title: "Rekor Bağış", news_2_desc: "Kış stokları tamamlandı.",
+                news_3_tag: "Etkinlikler", news_3_title: "Gönüllü Buluşması", news_3_desc: "Herkesi bekliyoruz.",
+                login_title: "Hoş Geldiniz", login_tab: "Giriş", register_tab: "Kayıt Ol",
+                email_label: "E-posta", pass_label: "Şifre", name_label: "Ad Soyad", login_btn: "Giriş Yap", register_btn: "Kayıt Ol",
+                no_account: "Hesabınız yok mu?", has_account: "Hesabınız var mı?", register_link: "Kayıt olun", login_link: "Giriş yapın"
+            },
+            ru: {
+                nav_home: "Главная", nav_donate: "Пожертвовать", nav_volunteer: "Волонтерство", nav_login: "Вход", nav_logout: "Выход",
+                welcome_hero: "Источник жизни для животных", sub_hero: "Их здоровье доверено нам.",
+                stats_title: "Статистика", fed_today: "Накормлено", active_machines: "Активные", news_title: "Новости",
+                donate_title: "Поддержать", donate_desc: "Помогите с едой и водой.", card_holder: "Владелец", card_number: "Номер карты", amount: "Сумма (AZN)", min_amount: "Мин 1 AZN", donate_btn: "Пожертвовать",
+                vol_title: "Стать волонтером", vol_desc: "Контролируйте устройства!", why_id: "Зачем ID?", why_id_desc: "В целях безопасности.",
+                vol_form_phone: "Телефон", vol_form_address: "Адрес", vol_form_tc: "Серия ID", become_vol_btn: "Стать волонтером",
+                vol_task_title: "Задачи", vol_task_desc: "Устройства рядом:", accept_task: "Принять", task_accepted: "Принято!",
+                footer_desc: "Умная платформа для животных.", footer_sponsors: "Спонсоры", footer_contact: "Контакты",
+                footer_address: "г. Ханкенди, ул. Мира 5",
+                news_1_tag: "Регион", news_1_title: "Новая кормушка в Ханкенди", news_1_desc: "Активированы новые точки.",
+                news_2_tag: "Статистика", news_2_title: "Рекордные сборы", news_2_desc: "Зимние запасы обеспечены.",
+                news_3_tag: "События", news_3_title: "Встреча волонтеров", news_3_desc: "Приглашаем всех.",
+                login_title: "Добро пожаловать", login_tab: "Вход", register_tab: "Регистрация",
+                email_label: "Email", pass_label: "Пароль", name_label: "ФИО", login_btn: "Войти", register_btn: "Регистрация",
+                no_account: "Нет аккаунта?", has_account: "Есть аккаунт?", register_link: "Создать", login_link: "Войти"
+            }
+        };
 
-Bash
+        const machines = [
+            { id: 1, region: "Xankəndi, Mərkəz", status: "OK", lat: 39.82, lng: 46.75 },
+            { id: 2, region: "Xankəndi, Park", status: "Low Food", lat: 39.81, lng: 46.76 },
+            { id: 3, region: "Şuşa, Qala", status: "Low Water", lat: 39.75, lng: 46.74 },
+            { id: 4, region: "Bakı, Sahil", status: "OK", lat: 40.36, lng: 49.84 },
+        ];
 
-git clone https://github.com/username/ecopaw.git
-2. Serverdə açın
-Layihə JavaScript modullarından (type="module") istifadə etdiyi üçün birbaşa HTML faylını açmaq bəzi brauzerlərdə CORS xətası verə bilər. Ən yaxşı nəticə üçün VS Code "Live Server" və ya oxşar lokal serverdən istifadə edin.
+        // --- AUTH & INIT ---
+        window.initApp = async () => {
+            console.log("EcoPaw App Başladılır...");
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                    try {
+                        const docSnap = await getDoc(userRef);
+                        if (docSnap.exists() && docSnap.data().isVolunteer) {
+                            isVolunteer = true;
+                            enableVolunteerTheme();
+                        }
+                    } catch (e) {
+                        console.log("Profil yoxlanışı zamanı xəta:", e);
+                    }
+                    updateAuthUI();
+                } else {
+                    currentUser = null;
+                    isVolunteer = false;
+                    disableVolunteerTheme();
+                    updateAuthUI();
+                }
+            });
+            router('home');
+        };
 
-3. Firebase Konfiqurasiyası
-Kodun daxilindəki firebaseConfig obyektinin öz Firebase layihənizə uyğun olduğundan əmin olun. Hazırkı kodda demo API açarları yerləşdirilib.
+        // --- UI FUNCTIONS ---
+        window.changeLanguage = (lang) => {
+            currentLang = lang;
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                }
+            });
+            updateAuthUI();
+            const content = document.getElementById('app-content');
+            const currentViewElement = content.firstElementChild;
+            if (currentViewElement) {
+                const viewName = currentViewElement.id.replace('view-', '');
+                router(viewName);
+            }
+        }
 
-📖 İstifadə Qaydaları
-Giriş/Qeydiyyat: Sağ yuxarı küncdəki "Giriş" düyməsi ilə hesab yaradın.
+        window.enableVolunteerTheme = () => {
+            document.body.classList.add('volunteer-mode');
+            const btns = document.querySelectorAll('.bg-green-600');
+            btns.forEach(b => {
+                b.classList.remove('bg-green-600');
+                b.classList.add('bg-volunteer-DEFAULT', 'hover:bg-volunteer-dark');
+            });
+            const textCols = document.querySelectorAll('.text-green-600');
+            textCols.forEach(t => {
+                t.classList.remove('text-green-600');
+                t.classList.add('text-volunteer-DEFAULT');
+            });
+            const logo = document.getElementById('logo-icon');
+            if(logo) {
+                logo.classList.remove('text-green-600');
+                logo.classList.add('text-volunteer-DEFAULT');
+            }
+        }
 
-Könüllü Olmaq:
+        window.disableVolunteerTheme = () => {
+            document.body.classList.remove('volunteer-mode');
+            const logo = document.getElementById('logo-icon');
+            if(logo) {
+                logo.classList.add('text-green-600');
+                logo.classList.remove('text-volunteer-DEFAULT');
+            }
+        }
 
-Hesabınıza daxil olduqdan sonra "Könüllü Ol" səhifəsinə keçin.
+        window.updateAuthUI = () => {
+            const authSection = document.getElementById('auth-section');
+            if (!authSection) return;
 
-Formu doldurun.
+            if (currentUser) {
+                const volBadge = isVolunteer ? `<span class="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded shadow-sm">Könüllü</span>` : '';
+                authSection.innerHTML = `
+                    <div class="flex items-center space-x-3 fade-in">
+                        ${volBadge}
+                        <div class="flex flex-col text-right hidden md:block">
+                            <span class="text-sm font-bold text-gray-700">${currentUser.displayName || 'İstifadəçi'}</span>
+                        </div>
+                        <button onclick="handleLogout()" class="text-gray-500 hover:text-red-500 transition p-2 rounded-full hover:bg-gray-100" title="${translations[currentLang].nav_logout}">
+                            <i class="fa-solid fa-right-from-bracket text-xl"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                const loginText = translations[currentLang].nav_login || "Giriş";
+                authSection.innerHTML = `
+                    <button onclick="router('login')" class="btn-hover bg-green-600 text-white px-6 py-2.5 rounded-full font-bold shadow-lg transition-colors hover:bg-green-700">${loginText}</button>
+                `;
+            }
+        }
 
-Təsdiqləndikdən sonra interfeys avtomatik olaraq "Könüllü Rejiminə" keçəcək və xəritədəki problemli cihazları görə biləcəksiniz.
+        // --- ROUTING ---
+        const views = {
+            home: () => `
+                <div class="bg-gradient-to-r from-green-50 to-white py-16">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center">
+                        <div class="md:w-1/2 mb-8 md:mb-0">
+                            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                                <span class="text-green-600">EcoPaw:</span> <span data-key="welcome_hero">${translations[currentLang].welcome_hero}</span>
+                            </h1>
+                            <p class="text-lg text-gray-600 mb-8" data-key="sub_hero">${translations[currentLang].sub_hero}</p>
+                            <div class="flex space-x-4">
+                                <button onclick="router('donate')" class="btn-hover bg-green-600 text-white px-8 py-3.5 rounded-full font-bold shadow-xl hover:bg-green-700 transition-colors">
+                                    ${translations[currentLang].donate_btn} <i class="fa-solid fa-heart ml-2"></i>
+                                </button>
+                                <button onclick="router('volunteer')" class="btn-hover bg-white border-2 border-green-600 text-green-600 px-8 py-3.5 rounded-full font-bold hover:bg-green-50 transition-colors">
+                                    ${translations[currentLang].nav_volunteer}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 flex justify-center">
+                            <img src="https://placehold.co/500x400/e2e8f0/16a34a?text=EcoPaw+Khankendi" alt="Happy Animals" class="rounded-3xl shadow-2xl transform rotate-2 hover:rotate-0 transition duration-500 border-4 border-white">
+                        </div>
+                    </div>
+                </div>
 
-Tapşırıq İdarəetməsi: Ana səhifədə "Yem bitib" və ya "Su bitib" xəbərdarlığı olan cihazlar üçün "İşi Qəbul Et" düyməsini sıxın.
+                ${isVolunteer ? `
+                <div class="max-w-7xl mx-auto px-4 mt-8 fade-in">
+                    <div class="bg-yellow-50 border-l-8 border-yellow-400 p-8 rounded-r-xl shadow-md">
+                        <h2 class="text-2xl font-bold text-yellow-800 mb-4"><i class="fa-solid fa-list-check mr-2"></i> ${translations[currentLang].vol_task_title}</h2>
+                        <p class="mb-6 text-yellow-700 font-medium">${translations[currentLang].vol_task_desc}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white p-5 rounded-xl shadow-md flex justify-between items-center border border-yellow-100">
+                                <div>
+                                    <h4 class="font-bold text-lg text-gray-800">Xankəndi, Park</h4>
+                                    <span class="text-red-500 text-sm font-semibold flex items-center mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Yem bitib</span>
+                                </div>
+                                <button onclick="acceptTask(this)" class="btn-hover bg-volunteer-DEFAULT text-white px-5 py-2.5 rounded-lg hover:bg-volunteer-dark text-sm font-bold shadow transition">
+                                    ${translations[currentLang].accept_task}
+                                </button>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-md flex justify-between items-center border border-yellow-100">
+                                <div>
+                                    <h4 class="font-bold text-lg text-gray-800">Şuşa, Qala</h4>
+                                    <span class="text-blue-500 text-sm font-semibold flex items-center mt-1"><i class="fa-solid fa-droplet-slash mr-1"></i> Su bitib</span>
+                                </div>
+                                <button onclick="acceptTask(this)" class="btn-hover bg-volunteer-DEFAULT text-white px-5 py-2.5 rounded-lg hover:bg-volunteer-dark text-sm font-bold shadow transition">
+                                    ${translations[currentLang].accept_task}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
 
-📂 Fayl Strukturu
-Plaintext
+                <div class="max-w-7xl mx-auto px-4 mt-16">
+                    <h2 class="text-3xl font-bold text-center mb-12" data-key="stats_title">${translations[currentLang].stats_title}</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                        <div class="bg-white p-8 rounded-2xl shadow-lg border-b-4 border-green-600 transform hover:-translate-y-2 transition duration-300">
+                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-2xl"><i class="fa-solid fa-bowl-food"></i></div>
+                            <div class="text-5xl font-extrabold text-gray-800 mb-2">1,245</div>
+                            <div class="text-gray-500 font-medium" data-key="fed_today">${translations[currentLang].fed_today}</div>
+                        </div>
+                        <div class="bg-white p-8 rounded-2xl shadow-lg border-b-4 border-blue-500 transform hover:-translate-y-2 transition duration-300">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 text-2xl"><i class="fa-solid fa-server"></i></div>
+                            <div class="text-5xl font-extrabold text-gray-800 mb-2">48</div>
+                            <div class="text-gray-500 font-medium" data-key="active_machines">${translations[currentLang].active_machines}</div>
+                        </div>
+                        <div class="bg-white p-8 rounded-2xl shadow-lg border-b-4 border-orange-500 transform hover:-translate-y-2 transition duration-300">
+                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500 text-2xl"><i class="fa-solid fa-users"></i></div>
+                            <div class="text-5xl font-extrabold text-gray-800 mb-2">320</div>
+                            <div class="text-gray-500 font-medium">Könüllülər</div>
+                        </div>
+                    </div>
+                </div>
 
-ecopaw/
-├── index.html       # Əsas tətbiq faylı (Bütün kodlar buradadır)
-├── README.md        # Layihə sənədləşdirməsi
-└── assets/          # (Əgər gələcəkdə şəkillər əlavə olunarsa)
-🤝 Töhfə vermək (Contributing)
-Töhfə vermək istəyirsinizsə, zəhmət olmasa "Pull Request" göndərin və ya xətalar barədə "Issues" bölməsində məlumat verin.
+                <div class="max-w-7xl mx-auto px-4 mt-20">
+                    <h2 class="text-3xl font-bold mb-8 flex items-center">
+                        <span class="bg-green-600 w-2 h-8 mr-4 rounded-full"></span>
+                        <span data-key="news_title">${translations[currentLang].news_title}</span>
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition duration-300 group cursor-pointer">
+                            <div class="h-48 overflow-hidden relative">
+                                <img src="https://placehold.co/400x200/png?text=News+1" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <div class="absolute top-0 right-0 bg-green-600 text-white text-xs font-bold px-3 py-1 m-4 rounded-full" data-key="news_1_tag">${translations[currentLang].news_1_tag}</div>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="font-bold text-xl mt-2 mb-3 text-gray-800 group-hover:text-green-600 transition" data-key="news_1_title">${translations[currentLang].news_1_title}</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed" data-key="news_1_desc">${translations[currentLang].news_1_desc}</p>
+                            </div>
+                        </div>
+                         <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition duration-300 group cursor-pointer">
+                            <div class="h-48 overflow-hidden relative">
+                                <img src="https://placehold.co/400x200/png?text=News+2" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <div class="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 m-4 rounded-full" data-key="news_2_tag">${translations[currentLang].news_2_tag}</div>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="font-bold text-xl mt-2 mb-3 text-gray-800 group-hover:text-blue-500 transition" data-key="news_2_title">${translations[currentLang].news_2_title}</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed" data-key="news_2_desc">${translations[currentLang].news_2_desc}</p>
+                            </div>
+                        </div>
+                         <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition duration-300 group cursor-pointer">
+                            <div class="h-48 overflow-hidden relative">
+                                <img src="https://placehold.co/400x200/png?text=News+3" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <div class="absolute top-0 right-0 bg-purple-500 text-white text-xs font-bold px-3 py-1 m-4 rounded-full" data-key="news_3_tag">${translations[currentLang].news_3_tag}</div>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="font-bold text-xl mt-2 mb-3 text-gray-800 group-hover:text-purple-500 transition" data-key="news_3_title">${translations[currentLang].news_3_title}</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed" data-key="news_3_desc">${translations[currentLang].news_3_desc}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            donate: () => `
+                <div class="max-w-2xl mx-auto px-4 py-12 fade-in">
+                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-gray-100">
+                        <div class="text-center mb-10">
+                            <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-sm animate-bounce-slow">
+                                <i class="fa-solid fa-hand-holding-heart"></i>
+                            </div>
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2" data-key="donate_title">${translations[currentLang].donate_title}</h2>
+                            <p class="text-gray-500" data-key="donate_desc">${translations[currentLang].donate_desc}</p>
+                        </div>
+                        <form onsubmit="handleDonation(event)" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="card_holder">${translations[currentLang].card_holder}</label>
+                                <div class="relative"><input type="text" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-red-500 focus:ring-0 transition-colors outline-none"><i class="fa-solid fa-user absolute left-4 top-4 text-gray-400"></i></div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="card_number">${translations[currentLang].card_number}</label>
+                                <div class="relative"><input type="text" required placeholder="0000 0000 0000 0000" maxlength="19" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-red-500 focus:ring-0 transition-colors outline-none"><i class="fa-regular fa-credit-card absolute left-4 top-4 text-gray-400"></i></div>
+                            </div>
+                            <div class="flex gap-6">
+                                <div class="w-1/2"><label class="block text-sm font-bold text-gray-700 mb-2 ml-1">Tarix</label><input type="text" placeholder="MM/YY" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 outline-none focus:border-red-500 transition-colors"></div>
+                                <div class="w-1/2"><label class="block text-sm font-bold text-gray-700 mb-2 ml-1">CVV</label><input type="text" placeholder="123" maxlength="3" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 outline-none focus:border-red-500 transition-colors"></div>
+                            </div>
+                            <div class="pt-4">
+                                <label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="amount">${translations[currentLang].amount}</label>
+                                <div class="relative"><input type="number" id="donateAmount" min="1" value="1" required class="w-full border-2 border-gray-200 rounded-xl py-4 px-4 pl-12 text-lg font-bold text-gray-800 focus:border-red-500 transition-colors outline-none"><span class="absolute left-5 top-5 font-bold text-gray-400">₼</span></div>
+                                <p class="text-xs text-gray-400 mt-2 ml-1" data-key="min_amount">${translations[currentLang].min_amount}</p>
+                            </div>
+                            <button type="submit" class="btn-hover w-full bg-red-500 text-white font-bold py-4 rounded-xl shadow-xl hover:bg-red-600 transition mt-4"><span data-key="donate_btn">${translations[currentLang].donate_btn}</span></button>
+                        </form>
+                    </div>
+                </div>
+            `,
+            volunteer: () => `
+                <div class="max-w-5xl mx-auto px-4 py-12 fade-in">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div class="bg-blue-50 p-10 rounded-3xl relative overflow-hidden">
+                            <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-100 rounded-full opacity-50"></div>
+                            <h2 class="text-3xl font-bold mb-6 text-blue-900 relative z-10" data-key="vol_title">${translations[currentLang].vol_title}</h2>
+                            <p class="mb-8 text-blue-700 text-lg leading-relaxed relative z-10" data-key="vol_desc">${translations[currentLang].vol_desc}</p>
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500 mb-8 relative z-10">
+                                <h3 class="font-bold text-gray-800 mb-3 flex items-center text-lg"><div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3"><i class="fa-solid fa-key text-blue-500 text-sm"></i></div><span data-key="why_id">${translations[currentLang].why_id}</span></h3>
+                                <p class="text-sm text-gray-600 leading-relaxed" data-key="why_id_desc">${translations[currentLang].why_id_desc}</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-10 rounded-3xl shadow-2xl border border-gray-100 flex flex-col justify-center">
+                            ${currentUser ? `
+                                ${isVolunteer ? `
+                                    <div class="text-center py-10">
+                                        <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fa-solid fa-award text-5xl text-green-500"></i></div>
+                                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Siz artıq Könüllüsünüz!</h3>
+                                        <p class="text-gray-500">Ana səhifədə tapşırıqları görə bilərsiniz.</p>
+                                        <button onclick="router('home')" class="mt-8 btn-hover bg-green-500 text-white px-8 py-3 rounded-full font-bold shadow-lg">Tapşırıqlara Get</button>
+                                    </div>
+                                ` : `
+                                    <form onsubmit="handleVolunteerSignup(event)" class="space-y-6">
+                                        <h3 class="text-2xl font-bold mb-6 text-gray-800">Məlumatları Tamamlayın</h3>
+                                        <div><label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_phone">${translations[currentLang].vol_form_phone}</label><input type="tel" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors"></div>
+                                        <div><label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_address">${translations[currentLang].vol_form_address}</label><input type="text" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors"></div>
+                                        <div><label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_tc">${translations[currentLang].vol_form_tc}</label><input type="text" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors"><p class="text-xs text-gray-400 mt-2 bg-gray-50 p-2 rounded"><i class="fa-solid fa-info-circle mr-1"></i> Açarı götürərkən təsdiq üçün lazımdır.</p></div>
+                                        <button type="submit" class="btn-hover w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition shadow-lg mt-4"><span data-key="become_vol_btn">${translations[currentLang].become_vol_btn}</span></button>
+                                    </form>
+                                `}
+                            ` : `
+                                <div class="text-center py-10">
+                                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fa-solid fa-lock text-3xl text-gray-400"></i></div>
+                                    <h3 class="text-xl font-bold mb-2">Giriş Tələb Olunur</h3>
+                                    <p class="text-gray-500 mb-8">Könüllü olmaq üçün əvvəlcə hesabınıza giriş etməlisiniz.</p>
+                                    <button onclick="router('login')" class="btn-hover bg-green-600 text-white px-10 py-3 rounded-full font-bold shadow-lg">Giriş Et</button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `,
+            login: () => `
+                <div class="max-w-md mx-auto px-4 py-20 fade-in">
+                    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+                        <div class="bg-green-600 p-8 text-center">
+                             <h2 class="text-3xl font-bold text-white mb-2" data-key="login_title">${translations[currentLang].login_title}</h2>
+                             <p class="text-green-100 text-sm">EcoPaw ailəsinə qoşulun</p>
+                        </div>
+                        <div class="flex border-b">
+                            <button id="tab-login" onclick="switchAuthTab('login')" class="flex-1 py-4 text-center font-bold text-green-600 border-b-2 border-green-600 bg-green-50 transition-colors" data-key="login_tab">${translations[currentLang].login_tab}</button>
+                            <button id="tab-register" onclick="switchAuthTab('register')" class="flex-1 py-4 text-center font-bold text-gray-500 hover:text-gray-700 transition-colors" data-key="register_tab">${translations[currentLang].register_tab}</button>
+                        </div>
+                        <div class="p-8">
+                            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5 block">
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="email_label">${translations[currentLang].email_label}</label><div class="relative"><input type="email" id="loginEmail" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-green-600 outline-none transition-colors"><i class="fa-solid fa-envelope absolute left-4 top-4 text-gray-400"></i></div></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="pass_label">${translations[currentLang].pass_label}</label><div class="relative"><input type="password" id="loginPass" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-green-600 outline-none transition-colors"><i class="fa-solid fa-lock absolute left-4 top-4 text-gray-400"></i></div></div>
+                                <button type="submit" class="btn-hover w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition shadow-lg mt-2"><span data-key="login_btn">${translations[currentLang].login_btn}</span></button>
+                                <p class="text-center text-sm text-gray-500 mt-4"><span data-key="no_account">${translations[currentLang].no_account}</span> <a href="#" onclick="switchAuthTab('register')" class="text-green-600 font-bold" data-key="register_link">${translations[currentLang].register_link}</a></p>
+                            </form>
+                            
+                            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-5 hidden">
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="name_label">${translations[currentLang].name_label}</label><div class="relative"><input type="text" id="regName" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-green-600 outline-none transition-colors"><i class="fa-solid fa-user absolute left-4 top-4 text-gray-400"></i></div></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="email_label">${translations[currentLang].email_label}</label><div class="relative"><input type="email" id="regEmail" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-green-600 outline-none transition-colors"><i class="fa-solid fa-envelope absolute left-4 top-4 text-gray-400"></i></div></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1" data-key="pass_label">${translations[currentLang].pass_label}</label><div class="relative"><input type="password" id="regPass" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 pl-12 focus:border-green-600 outline-none transition-colors"><i class="fa-solid fa-lock absolute left-4 top-4 text-gray-400"></i></div></div>
+                                <button type="submit" class="btn-hover w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition shadow-lg mt-2"><span data-key="register_btn">${translations[currentLang].register_btn}</span></button>
+                                <p class="text-center text-sm text-gray-500 mt-4"><span data-key="has_account">${translations[currentLang].has_account}</span> <a href="#" onclick="switchAuthTab('login')" class="text-green-600 font-bold" data-key="login_link">${translations[currentLang].login_link}</a></p>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        window.router = (viewName) => {
+            const content = document.getElementById('app-content');
+            content.innerHTML = `<div id="view-${viewName}" class="fade-in">${views[viewName]()}</div>`;
+            window.scrollTo(0,0);
+        };
+
+        // --- AUTH UI LOGIC ---
+        window.switchAuthTab = (tab) => {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                tabLogin.classList.add('text-green-600', 'border-b-2', 'border-green-600', 'bg-green-50');
+                tabLogin.classList.remove('text-gray-500');
+                tabRegister.classList.remove('text-green-600', 'border-b-2', 'border-green-600', 'bg-green-50');
+                tabRegister.classList.add('text-gray-500');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                tabRegister.classList.add('text-green-600', 'border-b-2', 'border-green-600', 'bg-green-50');
+                tabRegister.classList.remove('text-gray-500');
+                tabLogin.classList.remove('text-green-600', 'border-b-2', 'border-green-600', 'bg-green-50');
+                tabLogin.classList.add('text-gray-500');
+            }
+        }
+
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPass').value;
+
+            try {
+                if (email && pass) {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    alert("Zəhmət olmasa email və şifrə daxil edin.");
+                    return;
+                }
+                currentUser = auth.currentUser;
+                updateAuthUI();
+                router('home');
+            } catch (error) {
+                console.error(error);
+                alert("Giriş xətası: " + error.message);
+            }
+        };
+
+        window.handleRegister = async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPass').value;
+            
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                await updateProfile(user, { displayName: name });
+                
+                const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                await setDoc(userRef, {
+                    name: name,
+                    email: email,
+                    createdAt: new Date(),
+                    isVolunteer: false
+                }, { merge: true });
+
+                currentUser = user;
+                updateAuthUI();
+                router('home');
+                alert("Qeydiyyat uğurla tamamlandı!");
+            } catch (error) {
+                console.error("Firebase Error:", error);
+                alert("Qeydiyyat xətası: " + error.message);
+            }
+        }
+
+        window.handleLogout = () => {
+            signOut(auth).then(() => {
+                currentUser = null;
+                isVolunteer = false;
+                disableVolunteerTheme();
+                updateAuthUI();
+                router('home');
+            });
+        };
+
+        window.handleDonation = async (e) => {
+            e.preventDefault();
+            const amount = document.getElementById('donateAmount').value;
+            if (amount < 1) { alert("Minimum məbləğ 1 AZN olmalıdır."); return; }
+            try {
+               if(auth.currentUser) {
+                   await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'donations'), {
+                       userId: auth.currentUser.uid, amount: amount, timestamp: new Date()
+                   });
+               }
+               alert(`Təşəkkürlər! ${amount} AZN uğurla bağışlandı.`);
+               router('home');
+            } catch (err) { alert("Səhv baş verdi."); }
+        };
+
+        window.handleVolunteerSignup = async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
+                    isVolunteer: true, phone: "555-00-00", role: "volunteer", updatedAt: new Date()
+                }, { merge: true });
+                isVolunteer = true;
+                enableVolunteerTheme();
+                updateAuthUI();
+                alert("Təbriklər! Siz artıq könüllüsünüz.");
+                router('home');
+            } catch (err) { alert("Xəta baş verdi."); }
+        };
+
+        window.acceptTask = (btnElement) => {
+            btnElement.innerHTML = `<i class="fa-solid fa-check"></i> ${translations[currentLang].task_accepted}`;
+            btnElement.classList.remove('bg-green-600', 'hover:bg-green-700', 'bg-volunteer-DEFAULT', 'hover:bg-volunteer-dark');
+            btnElement.classList.add('bg-gray-500', 'cursor-default');
+            btnElement.disabled = true;
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase();
+                if (val.length < 2) { searchResults.classList.add('hidden'); return; }
+                const filtered = machines.filter(m => m.region.toLowerCase().includes(val));
+                if (filtered.length > 0) {
+                    searchResults.innerHTML = filtered.map(m => `
+                        <div class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-0 text-sm transition" onclick="alert('Cihaz tapıldı: ${m.region}\\nStatus: ${m.status}')">
+                            <i class="fa-solid fa-location-dot text-green-600 mr-2"></i> <strong>${m.region}</strong>
+                            <span class="float-right text-xs px-2 py-1 rounded ${m.status === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${m.status}</span>
+                        </div>
+                    `).join('');
+                    searchResults.classList.remove('hidden');
+                } else {
+                    searchResults.innerHTML = `<div class="p-3 text-sm text-gray-500 italic">Nəticə tapılmadı</div>`;
+                    searchResults.classList.remove('hidden');
+                }
+            });
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
