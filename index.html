@@ -49,6 +49,11 @@
         .btn-hover { transition: all 0.3s ease; }
         .btn-hover:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
         .btn-hover:active { transform: translateY(0) scale(0.98); }
+        
+        /* Floating Buttons Style */
+        .fab-container { position: fixed; bottom: 30px; right: 30px; z-index: 100; display: flex; flex-direction: column; gap: 15px; }
+        .fab-btn { width: 50px; height: 50px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.3s; cursor: pointer; }
+        .fab-btn:hover { transform: scale(1.1); }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
@@ -62,18 +67,18 @@
                 </div>
 
                 <div class="hidden md:flex flex-1 mx-8 relative">
-                    <input type="text" id="searchInput" placeholder="Region axtar (məs: Xankəndi, Şuşa)..." 
+                    <input type="text" id="searchInput" data-key-placeholder="search_placeholder" placeholder="Region axtar (məs: Xankəndi, Şuşa)..." 
                            class="w-full border-2 border-gray-200 rounded-full py-2 px-4 pl-10 focus:outline-none focus:border-green-600 transition-all duration-300">
                     <i class="fa-solid fa-search absolute left-3 top-3.5 text-gray-400"></i>
                     <div id="searchResults" class="absolute top-12 left-0 w-full bg-white shadow-lg rounded-lg hidden p-2 z-50"></div>
                 </div>
 
-                <div class="hidden md:flex items-center space-x-4">
+                <div class="hidden md:flex items-center space-x-2">
                     <button onclick="router('home')" class="font-medium hover:text-green-600 transition px-3 py-2 rounded-lg hover:bg-green-50" data-key="nav_home">Ana Səhifə</button>
                     <button onclick="router('donate')" class="font-medium hover:text-green-600 transition px-3 py-2 rounded-lg hover:bg-green-50" data-key="nav_donate">Bağış Et</button>
                     <button onclick="router('volunteer')" class="font-medium hover:text-green-600 transition px-3 py-2 rounded-lg hover:bg-green-50" data-key="nav_volunteer">Könüllü Ol</button>
                     
-                    <div class="relative group">
+                    <div class="relative group ml-2">
                         <select id="langSelect" onchange="changeLanguage(this.value)" class="appearance-none bg-gray-100 border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-green-600 cursor-pointer font-bold transition-all hover:shadow-md text-sm uppercase">
                             <option value="az">AZ</option>
                             <option value="en">EN</option>
@@ -120,6 +125,17 @@
     <main id="app-content" class="min-h-screen pb-20 pt-4">
     </main>
 
+    <div class="fab-container fade-in">
+        <button onclick="router('help')" class="fab-btn bg-blue-500 hover:bg-blue-600" title="Kömək">
+            <i class="fa-solid fa-question"></i>
+        </button>
+        <button onclick="router('about')" class="fab-btn bg-green-500 hover:bg-green-600" title="Haqqımızda">
+            <i class="fa-solid fa-info"></i>
+        </button>
+    </div>
+
+    <div id="recaptcha-container"></div>
+
     <footer class="bg-gray-800 text-white py-12 mt-10 rounded-t-3xl">
         <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
@@ -128,6 +144,11 @@
                     <span class="font-bold text-xl">EcoPaw</span>
                 </div>
                 <p class="text-gray-400 text-sm leading-relaxed" data-key="footer_desc">Heyvanların sağlamlığı və qidalanması üçün avtomatlaşdırılmış ağıllı platforma.</p>
+                <div class="mt-4">
+                    <a href="https://www.instagram.com/ecopawkarabakh?igsh=YnFuNzY0bDlvYm1v" target="_blank" class="text-gray-400 hover:text-pink-500 transition text-2xl">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                </div>
             </div>
             <div>
                 <h3 class="font-bold text-lg mb-4 text-green-500" data-key="footer_sponsors">Sponsorlar</h3>
@@ -156,7 +177,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, updateProfile, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, updateProfile, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, onSnapshot, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
@@ -179,16 +200,19 @@
         let currentUser = null;
         let isVolunteer = false;
         let currentLang = 'az';
+        let confirmationResult = null; // For phone auth
 
         // --- TRANSLATIONS ---
         const translations = {
             az: {
                 nav_home: "Ana Səhifə", nav_donate: "Bağış Et", nav_volunteer: "Könüllü Ol", nav_login: "Giriş", nav_logout: "Çıxış",
+                search_placeholder: "Region axtar (məs: Xankəndi, Şuşa)...",
                 welcome_hero: "Küçə heyvanları üçün həyat mənbəyi", sub_hero: "Onların sağlamlığı və qidalanması bizə əmanətdir. Sən də bizə qoşul!",
                 stats_title: "Canlı Statistika", fed_today: "Bu gün bəslənən", active_machines: "Aktiv Cihazlar", news_title: "Son Xəbərlər",
                 donate_title: "Dəstək Ol", donate_desc: "Balaca dostlarımız üçün yem və su təminatına kömək et.", card_holder: "Kart Sahibi", card_number: "Kart Nömrəsi", amount: "Məbləğ (AZN)", min_amount: "Minimum 1 AZN", donate_btn: "Bağışla",
                 vol_title: "Könüllü Ol", vol_desc: "Regionundakı cihazlara nəzarət et, qəhrəman ol!", why_id: "Şəxsiyyət Vəsiqəsi niyə lazımdır?", why_id_desc: "Cihazın açarı sizə təhvil verilərkən təhlükəsizlik məqsədilə şəxsiyyət vəsiqənizi müvəqqəti olaraq səlahiyyətli şəxsə təqdim etməlisiniz.",
-                vol_form_phone: "Telefon", vol_form_address: "Ünvan", vol_form_tc: "Ş/V Seriya Nömrəsi (Fin kod)", become_vol_btn: "Könüllü Ol",
+                vol_form_phone: "Telefon nömrəsi", vol_form_address: "Ünvan", vol_form_tc: "Ş/V Seriya Nömrəsi (Fin kod)", become_vol_btn: "Təsdiqlə və Könüllü Ol",
+                vol_send_code: "Kod Göndər", vol_verify_code: "Kodu Təsdiqlə", vol_enter_code: "SMS Kodunu daxil edin",
                 vol_task_title: "Könüllü Tapşırıqları", vol_task_desc: "Yaxınlığınızda yem və ya su bitən cihazlar:", accept_task: "İşi Qəbul Et", task_accepted: "Qəbul edildi!",
                 footer_desc: "Heyvanların sağlamlığı və qidalanması üçün avtomatlaşdırılmış ağıllı platforma.", footer_sponsors: "Sponsorlar", footer_contact: "Əlaqə",
                 footer_address: "Xankəndi şəhəri, Sülh küçəsi 5",
@@ -198,15 +222,34 @@
                 login_title: "Xoş Gəldiniz", login_tab: "Giriş", register_tab: "Qeydiyyat",
                 email_label: "Email ünvanı", pass_label: "Şifrə", name_label: "Ad və Soyad", login_btn: "Giriş Et", register_btn: "Qeydiyyatdan Keç",
                 no_account: "Hesabınız yoxdur?", has_account: "Artıq hesabınız var?", register_link: "Qeydiyyatdan keçin", login_link: "Giriş edin",
-                profile_title: "Şəxsi Kabinet", profile_email: "Email", profile_status: "Status", profile_role_vol: "Könüllü", profile_role_user: "İstifadəçi"
+                profile_title: "Şəxsi Kabinet", profile_email: "Email", profile_status: "Status", profile_role_vol: "Könüllü", profile_role_user: "İstifadəçi",
+                
+                about_title: "Haqqımızda",
+                about_text: "Məqsədimiz küçə heyvanlarının sağlam və təhlükəsiz qidalanmasını təmin edən ağıllı bir ekosistem qurmaqdır. Platformamız müxtəlif bölgələrdə yerləşən avtomatik bəsləyici cihazları izləyir, yem-su səviyyəsinə nəzarət edir və ehtiyac olduqda müdaxilə edir.",
+                about_list_title: "Web sayt vasitəsilə istifadəçilər:",
+                about_li_1: "Bağış edə və heyvanların qidalanmasına dəstək ola bilər,",
+                about_li_2: "Könüllü kimi cihazları yeniləmədə iştirak edə bilər,",
+                about_li_3: "Öz fəaliyyətini izləyə bilər,",
+                about_li_4: "Regionlara görə yem-su vəziyyətini görə bilər.",
+                about_end: "Tətbiqə girişdə dil seçimi təqdim olunur. Qeydiyyatdan sonra 4 əsas bölmə yer alır: Ana ekran, Bağış, Könüllülük, Profil. Könüllülər cihazda yem və su bitdikdə bildirim alır və tapşırığı qəbul edə bilirlər. Xərclər layihə tərəfindən qarşılanır. Biz birlikdə daha qayğıkeş və davamlı heyvansevər cəmiyyət yaratmağı hədəfləyirik.",
+
+                help_title: "Tez-tez Verilən Suallar",
+                faq_q1: "Bağış etmək necə işləyir?",
+                faq_a1: "Siz istədiyiniz məbləği (min. 1 AZN) daxil edərək kart vasitəsilə ödəmə edə bilərsiniz. Vəsaitlər birbaşa yem və su təminatına xərclənir.",
+                faq_q2: "Necə könüllü ola bilərəm?",
+                faq_a2: "Qeydiyyatdan keçdikdən sonra 'Könüllü Ol' bölməsinə daxil olub məlumatlarınızı doldurun. Təsdiqdən sonra sizə yaxın cihazlara qulluq edə bilərsiniz.",
+                faq_q3: "Cihazlar harada yerləşir?",
+                faq_a3: "Hazırda əsasən Xankəndi, Şuşa və Bakı ətrafında aktivdir. Ana səhifədə axtarış edərək dəqiq yerləri görə bilərsiniz."
             },
             en: {
                 nav_home: "Home", nav_donate: "Donate", nav_volunteer: "Volunteer", nav_login: "Login", nav_logout: "Logout",
+                search_placeholder: "Search region (e.g., Khankendi, Shusha)...",
                 welcome_hero: "Lifeline for Street Animals", sub_hero: "Their health and nutrition entrusted to us. Join us!",
                 stats_title: "Live Statistics", fed_today: "Fed Today", active_machines: "Active Machines", news_title: "Latest News",
                 donate_title: "Support Us", donate_desc: "Help provide food and water.", card_holder: "Card Holder", card_number: "Card Number", amount: "Amount (AZN)", min_amount: "Minimum 1 AZN", donate_btn: "Donate",
-                vol_title: "Become a Volunteer", vol_desc: "Monitor devices in your region!", why_id: "Why ID?", why_id_desc: "For security purposes.",
-                vol_form_phone: "Phone", vol_form_address: "Address", vol_form_tc: "ID Serial Number", become_vol_btn: "Register as Volunteer",
+                vol_title: "Become a Volunteer", vol_desc: "Monitor devices in your region!", why_id: "Why ID?", why_id_desc: "For security purposes when handing over device keys.",
+                vol_form_phone: "Phone Number", vol_form_address: "Address", vol_form_tc: "ID Serial Number", become_vol_btn: "Verify & Become Volunteer",
+                vol_send_code: "Send Code", vol_verify_code: "Verify Code", vol_enter_code: "Enter SMS Code",
                 vol_task_title: "Volunteer Tasks", vol_task_desc: "Devices running low:", accept_task: "Accept Task", task_accepted: "Accepted!",
                 footer_desc: "Automated smart platform for animal health.", footer_sponsors: "Sponsors", footer_contact: "Contact",
                 footer_address: "Khankendi city, Peace street 5",
@@ -216,15 +259,34 @@
                 login_title: "Welcome Back", login_tab: "Login", register_tab: "Register",
                 email_label: "Email Address", pass_label: "Password", name_label: "Full Name", login_btn: "Login", register_btn: "Sign Up",
                 no_account: "Don't have an account?", has_account: "Already have an account?", register_link: "Sign up", login_link: "Login",
-                profile_title: "My Profile", profile_email: "Email", profile_status: "Status", profile_role_vol: "Volunteer", profile_role_user: "User"
+                profile_title: "My Profile", profile_email: "Email", profile_status: "Status", profile_role_vol: "Volunteer", profile_role_user: "User",
+                
+                about_title: "About Us",
+                about_text: "Our goal is to build a smart ecosystem ensuring healthy and safe nutrition for street animals. Our platform monitors automated feeding devices in various regions, tracking food and water levels and intervening when necessary.",
+                about_list_title: "Through the web site, users can:",
+                about_li_1: "Donate and support animal nutrition,",
+                about_li_2: "Participate in refilling devices as volunteers,",
+                about_li_3: "Track their own activities,",
+                about_li_4: "View food/water status by region.",
+                about_end: "Language selection is available upon app entry. After registration, there are 4 main sections: Home, Donate, Volunteer, Profile. Volunteers receive notifications when devices run low and can accept tasks. Costs are covered by the project. We aim to create a more caring and sustainable animal-loving society together.",
+                
+                help_title: "Frequently Asked Questions",
+                faq_q1: "How does donating work?",
+                faq_a1: "You can enter any amount (min. 1 AZN) and pay via card. Funds are directly used for food and water supply.",
+                faq_q2: "How can I become a volunteer?",
+                faq_a2: "After registering, go to the 'Volunteer' section and fill in your details. Once approved, you can service devices near you.",
+                faq_q3: "Where are the devices located?",
+                faq_a3: "Currently active mainly in Khankendi, Shusha, and Baku. You can search for exact locations on the Home page."
             },
             tr: {
                 nav_home: "Ana Sayfa", nav_donate: "Bağış Yap", nav_volunteer: "Gönüllü Ol", nav_login: "Giriş", nav_logout: "Çıkış",
+                search_placeholder: "Bölge ara (ör: Hankendi, Şuşa)...",
                 welcome_hero: "Sokak Hayvanları için Yaşam Kaynağı", sub_hero: "Sağlıkları ve beslenmeleri bize emanet.",
                 stats_title: "Canlı İstatistikler", fed_today: "Bugün Beslenen", active_machines: "Aktif Cihazlar", news_title: "Son Haberler",
                 donate_title: "Destek Ol", donate_desc: "Mama ve su teminine yardım et.", card_holder: "Kart Sahibi", card_number: "Kart No", amount: "Tutar (AZN)", min_amount: "Min 1 AZN", donate_btn: "Bağış Yap",
-                vol_title: "Gönüllü Ol", vol_desc: "Bölgendeki cihazları kontrol et!", why_id: "Neden Kimlik?", why_id_desc: "Güvenlik nedeniyle gereklidir.",
-                vol_form_phone: "Telefon", vol_form_address: "Adres", vol_form_tc: "TC/Seri No", become_vol_btn: "Gönüllü Ol",
+                vol_title: "Gönüllü Ol", vol_desc: "Bölgendeki cihazları kontrol et!", why_id: "Neden Kimlik?", why_id_desc: "Cihaz anahtarı teslim edilirken güvenlik için gereklidir.",
+                vol_form_phone: "İletişim Numarası", vol_form_address: "Adres", vol_form_tc: "TC/Seri No", become_vol_btn: "Doğrula ve Gönüllü Ol",
+                vol_send_code: "Kod Gönder", vol_verify_code: "Kodu Doğrula", vol_enter_code: "SMS Kodunu Girin",
                 vol_task_title: "Gönüllü Görevleri", vol_task_desc: "Yakındaki boş cihazlar:", accept_task: "Kabul Et", task_accepted: "Kabul edildi!",
                 footer_desc: "Hayvan sağlığı için akıllı platform.", footer_sponsors: "Sponsorlar", footer_contact: "İletişim",
                 footer_address: "Hankendi şehri, Barış sokağı 5",
@@ -234,15 +296,34 @@
                 login_title: "Hoş Geldiniz", login_tab: "Giriş", register_tab: "Kayıt Ol",
                 email_label: "E-posta", pass_label: "Şifre", name_label: "Ad Soyad", login_btn: "Giriş Yap", register_btn: "Kayıt Ol",
                 no_account: "Hesabınız yok mu?", has_account: "Hesabınız var mı?", register_link: "Kayıt olun", login_link: "Giriş yapın",
-                profile_title: "Profilim", profile_email: "E-posta", profile_status: "Durum", profile_role_vol: "Gönüllü", profile_role_user: "Kullanıcı"
+                profile_title: "Profilim", profile_email: "E-posta", profile_status: "Durum", profile_role_vol: "Gönüllü", profile_role_user: "Kullanıcı",
+                
+                about_title: "Hakkımızda",
+                about_text: "Amacımız, sokak hayvanlarının sağlıklı ve güvenli beslenmesini sağlayan akıllı bir ekosistem kurmaktır. Platformumuz, farklı bölgelerdeki otomatik besleme cihazlarını izler, mama ve su seviyelerini kontrol eder ve gerektiğinde müdahale eder.",
+                about_list_title: "Web site aracılığıyla kullanıcılar:",
+                about_li_1: "Bağış yapabilir ve beslenmeye destek olabilir,",
+                about_li_2: "Gönüllü olarak cihaz dolumuna katılabilir,",
+                about_li_3: "Kendi faaliyetlerini izleyebilir,",
+                about_li_4: "Bölgesel mama-su durumunu görebilir.",
+                about_end: "Uygulamaya girişte dil seçimi sunulur. Kayıttan sonra 4 ana bölüm yer alır: Ana Ekran, Bağış, Gönüllülük, Profil. Gönüllüler mama veya su bittiğinde bildirim alır ve görevi kabul edebilir. Masraflar proje tarafından karşılanır. Birlikte daha duyarlı ve sürdürülebilir bir hayvansever toplum yaratmayı hedefliyoruz.",
+
+                help_title: "Sıkça Sorulan Sorular",
+                faq_q1: "Bağış sistemi nasıl çalışır?",
+                faq_a1: "İstediğiniz tutarı (min 1 AZN) girerek kart ile ödeme yapabilirsiniz. Fonlar doğrudan mama ve su temini için kullanılır.",
+                faq_q2: "Nasıl gönüllü olabilirim?",
+                faq_a2: "Kayıt olduktan sonra 'Gönüllü Ol' bölümüne gidip bilgilerinizi doldurun. Onaydan sonra size yakın cihazlara bakabilirsiniz.",
+                faq_q3: "Cihazlar nerede?",
+                faq_a3: "Şu anda ağırlıklı olarak Hankendi, Şuşa ve Bakü'de aktiftir. Ana sayfada arama yaparak tam konumları görebilirsiniz."
             },
             ru: {
                 nav_home: "Главная", nav_donate: "Пожертвовать", nav_volunteer: "Волонтерство", nav_login: "Вход", nav_logout: "Выход",
+                search_placeholder: "Поиск региона (напр. Ханкенди, Шуша)...",
                 welcome_hero: "Источник жизни для животных", sub_hero: "Их здоровье доверено нам.",
                 stats_title: "Статистика", fed_today: "Накормлено", active_machines: "Активные", news_title: "Новости",
                 donate_title: "Поддержать", donate_desc: "Помогите с едой и водой.", card_holder: "Владелец", card_number: "Номер карты", amount: "Сумма (AZN)", min_amount: "Мин 1 AZN", donate_btn: "Пожертвовать",
-                vol_title: "Стать волонтером", vol_desc: "Контролируйте устройства!", why_id: "Зачем ID?", why_id_desc: "В целях безопасности.",
-                vol_form_phone: "Телефон", vol_form_address: "Адрес", vol_form_tc: "Серия ID", become_vol_btn: "Стать волонтером",
+                vol_title: "Стать волонтером", vol_desc: "Контролируйте устройства!", why_id: "Зачем ID?", why_id_desc: "В целях безопасности при передаче ключей.",
+                vol_form_phone: "Номер телефона", vol_form_address: "Адрес", vol_form_tc: "Серия ID", become_vol_btn: "Подтвердить и стать волонтером",
+                vol_send_code: "Отправить код", vol_verify_code: "Подтвердить код", vol_enter_code: "Введите СМС код",
                 vol_task_title: "Задачи", vol_task_desc: "Устройства рядом:", accept_task: "Принять", task_accepted: "Принято!",
                 footer_desc: "Умная платформа для животных.", footer_sponsors: "Спонсоры", footer_contact: "Контакты",
                 footer_address: "г. Ханкенди, ул. Мира 5",
@@ -252,7 +333,24 @@
                 login_title: "Добро пожаловать", login_tab: "Вход", register_tab: "Регистрация",
                 email_label: "Email", pass_label: "Пароль", name_label: "ФИО", login_btn: "Войти", register_btn: "Регистрация",
                 no_account: "Нет аккаунта?", has_account: "Есть аккаунт?", register_link: "Создать", login_link: "Войти",
-                profile_title: "Мой Профиль", profile_email: "Email", profile_status: "Статус", profile_role_vol: "Волонтер", profile_role_user: "Пользователь"
+                profile_title: "Мой Профиль", profile_email: "Email", profile_status: "Статус", profile_role_vol: "Волонтер", profile_role_user: "Пользователь",
+                
+                about_title: "О Нас",
+                about_text: "Наша цель — создать умную экосистему, обеспечивающую здоровое и безопасное питание уличных животных. Наша платформа отслеживает автоматические кормушки в разных регионах, контролирует уровень еды и воды и вмешивается при необходимости.",
+                about_list_title: "Через мобильное приложение пользователи могут:",
+                about_li_1: "Делать пожертвования и поддерживать питание,",
+                about_li_2: "Участвовать в пополнении устройств как волонтеры,",
+                about_li_3: "Отслеживать свою деятельность,",
+                about_li_4: "Просматривать статус еды/воды по регионам.",
+                about_end: "Выбор языка доступен при входе. После регистрации есть 4 основных раздела: Главная, Пожертвование, Волонтерство, Профиль. Волонтеры получают уведомления, когда заканчивается еда или вода, и могут принять задачу. Расходы покрываются проектом. Мы стремимся вместе создать более заботливое общество.",
+
+                help_title: "Часто задаваемые вопросы",
+                faq_q1: "Как сделать пожертвование?",
+                faq_a1: "Вы можете ввести любую сумму (мин. 1 AZN) и оплатить картой. Средства идут напрямую на еду и воду.",
+                faq_q2: "Как стать волонтером?",
+                faq_a2: "После регистрации перейдите в раздел 'Волонтерство' и заполните данные. После одобрения вы сможете обслуживать устройства рядом с вами.",
+                faq_q3: "Где находятся устройства?",
+                faq_a3: "В настоящее время активны в основном в Ханкенди, Шуше и Баку. Точное расположение можно найти на главной странице."
             }
         };
 
@@ -289,15 +387,63 @@
             router('home');
         };
 
+        // --- PHONE AUTH CONFIG ---
+        window.setupRecaptcha = () => {
+            if(!window.recaptchaVerifier) {
+                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    'size': 'invisible',
+                    'callback': (response) => {
+                        console.log("Recaptcha verified");
+                    }
+                });
+            }
+        }
+
+        window.sendOtp = async () => {
+            const phone = document.getElementById('volPhone').value;
+            if(!phone) { alert("Zəhmət olmasa nömrəni daxil edin"); return; }
+            
+            setupRecaptcha();
+            const appVerifier = window.recaptchaVerifier;
+
+            try {
+                // IMPORTANT: In a real app, 'signInWithPhoneNumber' logs you in. 
+                // Since the user is ALREADY logged in via email, this is for verification.
+                // We will simulate verification by sending the code. 
+                // Note: Phone number must include country code (+994...)
+                confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
+                
+                document.getElementById('otp-section').classList.remove('hidden');
+                document.getElementById('send-code-btn').classList.add('hidden');
+                alert("SMS kodu göndərildi!");
+            } catch (error) {
+                console.error("SMS Error:", error);
+                alert("SMS göndərilə bilmədi. Nömrəni (+994...) formatında yazın və Firebase konsolunda Phone Auth aktiv olduğundan əmin olun.");
+                // Reset captcha
+                if(window.recaptchaVerifier) window.recaptchaVerifier.clear();
+            }
+        }
+
         // --- UI FUNCTIONS ---
         window.changeLanguage = (lang) => {
             currentLang = lang;
+            
+            // Text translation
             document.querySelectorAll('[data-key]').forEach(el => {
                 const key = el.getAttribute('data-key');
                 if (translations[lang][key]) {
                     el.innerText = translations[lang][key];
                 }
             });
+
+            // Placeholder translation
+            document.querySelectorAll('[data-key-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-key-placeholder');
+                if (translations[lang][key]) {
+                    el.placeholder = translations[lang][key];
+                }
+            });
+
             updateAuthUI();
             const content = document.getElementById('app-content');
             const currentViewElement = content.firstElementChild;
@@ -348,7 +494,6 @@
                  if (currentUser) {
                     const volBadge = isVolunteer ? `<span class="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded shadow-sm">Könüllü</span>` : '';
                     
-                    // Display name clickable button for profile
                     const profileButton = `
                         <button onclick="router('profile'); ${forMobile ? 'toggleMobileMenu()' : ''}" class="text-sm font-bold text-gray-700 hover:text-green-600 transition flex items-center">
                            ${currentUser.displayName || 'İstifadəçi'}
@@ -550,9 +695,22 @@
                                 ` : `
                                     <form onsubmit="handleVolunteerSignup(event)" class="space-y-6">
                                         <h3 class="text-2xl font-bold mb-6 text-gray-800">Məlumatları Tamamlayın</h3>
-                                        <div><label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_phone">${translations[currentLang].vol_form_phone}</label><input type="tel" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors"></div>
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_phone">${translations[currentLang].vol_form_phone}</label>
+                                            <div class="flex gap-2">
+                                                <input type="tel" id="volPhone" required placeholder="+994 50 000 00 00" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors">
+                                                <button type="button" id="send-code-btn" onclick="sendOtp()" class="bg-blue-500 text-white px-4 rounded-xl hover:bg-blue-600 text-sm whitespace-nowrap" data-key="vol_send_code">${translations[currentLang].vol_send_code}</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="otp-section" class="hidden">
+                                            <label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_enter_code">${translations[currentLang].vol_enter_code}</label>
+                                            <input type="text" id="otpCode" placeholder="123456" class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors mb-2">
+                                        </div>
+
                                         <div><label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_address">${translations[currentLang].vol_form_address}</label><input type="text" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors"></div>
                                         <div><label class="block text-sm font-bold text-gray-700 mb-2" data-key="vol_form_tc">${translations[currentLang].vol_form_tc}</label><input type="text" required class="w-full border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-green-600 focus:ring-0 outline-none transition-colors"><p class="text-xs text-gray-400 mt-2 bg-gray-50 p-2 rounded"><i class="fa-solid fa-info-circle mr-1"></i> Açarı götürərkən təsdiq üçün lazımdır.</p></div>
+                                        
                                         <button type="submit" class="btn-hover w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition shadow-lg mt-4"><span data-key="become_vol_btn">${translations[currentLang].become_vol_btn}</span></button>
                                     </form>
                                 `}
@@ -565,6 +723,57 @@
                                 </div>
                             `}
                         </div>
+                    </div>
+                </div>
+            `,
+            about: () => `
+                <div class="max-w-4xl mx-auto px-4 py-12 fade-in">
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+                        <div class="relative h-64 bg-green-600">
+                             <div class="absolute inset-0 bg-black opacity-20"></div>
+                             <div class="absolute inset-0 flex flex-col items-center justify-center text-white p-4 text-center">
+                                 <h1 class="text-4xl font-bold mb-4" data-key="about_title">${translations[currentLang].about_title}</h1>
+                                 <i class="fa-solid fa-paw text-6xl opacity-50"></i>
+                             </div>
+                        </div>
+                        <div class="p-8 md:p-12">
+                            <p class="text-lg text-gray-700 leading-relaxed mb-8" data-key="about_text">${translations[currentLang].about_text}</p>
+                            
+                            <div class="bg-green-50 p-8 rounded-2xl mb-8 border border-green-100">
+                                <h3 class="font-bold text-xl text-green-800 mb-4" data-key="about_list_title">${translations[currentLang].about_list_title}</h3>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-600 mt-1 mr-3"></i><span data-key="about_li_1">${translations[currentLang].about_li_1}</span></li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-600 mt-1 mr-3"></i><span data-key="about_li_2">${translations[currentLang].about_li_2}</span></li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-600 mt-1 mr-3"></i><span data-key="about_li_3">${translations[currentLang].about_li_3}</span></li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-600 mt-1 mr-3"></i><span data-key="about_li_4">${translations[currentLang].about_li_4}</span></li>
+                                </ul>
+                            </div>
+                            
+                            <p class="text-gray-600 italic leading-relaxed" data-key="about_end">${translations[currentLang].about_end}</p>
+                        </div>
+                    </div>
+                </div>
+            `,
+            help: () => `
+                <div class="max-w-3xl mx-auto px-4 py-12 fade-in">
+                    <h2 class="text-3xl font-bold text-center mb-10 text-gray-800" data-key="help_title">${translations[currentLang].help_title}</h2>
+                    <div class="space-y-6">
+                        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                            <h3 class="font-bold text-lg mb-2 text-gray-900" data-key="faq_q1">${translations[currentLang].faq_q1}</h3>
+                            <p class="text-gray-600" data-key="faq_a1">${translations[currentLang].faq_a1}</p>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                            <h3 class="font-bold text-lg mb-2 text-gray-900" data-key="faq_q2">${translations[currentLang].faq_q2}</h3>
+                            <p class="text-gray-600" data-key="faq_a2">${translations[currentLang].faq_a2}</p>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
+                            <h3 class="font-bold text-lg mb-2 text-gray-900" data-key="faq_q3">${translations[currentLang].faq_q3}</h3>
+                            <p class="text-gray-600" data-key="faq_a3">${translations[currentLang].faq_a3}</p>
+                        </div>
+                    </div>
+                    <div class="mt-10 text-center text-gray-500">
+                        <p>Başqa sualınız var?</p>
+                        <a href="mailto:info@ecopaw.az" class="text-green-600 font-bold hover:underline">info@ecopaw.az</a>
                     </div>
                 </div>
             `,
@@ -618,6 +827,9 @@
                                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                     <p class="text-xs text-gray-500 uppercase tracking-wide mb-1" data-key="profile_email">${translations[currentLang].profile_email}</p>
                                     <p class="font-bold text-gray-800 break-all">${currentUser.email}</p>
+                                    ${currentUser.emailVerified ? 
+                                        '<span class="text-xs text-green-500"><i class="fa-solid fa-check-circle"></i> Təsdiqlənib</span>' : 
+                                        '<span class="text-xs text-red-500"><i class="fa-solid fa-times-circle"></i> Təsdiqlənməyib</span>'}
                                 </div>
                                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                     <p class="text-xs text-gray-500 uppercase tracking-wide mb-1" data-key="profile_status">${translations[currentLang].profile_status}</p>
@@ -708,6 +920,9 @@
 
                 await updateProfile(user, { displayName: name });
                 
+                // --- SEND EMAIL VERIFICATION ---
+                await sendEmailVerification(user);
+                
                 const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
                 await setDoc(userRef, {
                     name: name,
@@ -719,7 +934,7 @@
                 currentUser = user;
                 updateAuthUI();
                 router('home');
-                alert("Qeydiyyat uğurla tamamlandı!");
+                alert("Qeydiyyat uğurla tamamlandı! Emailinizə təsdiq linki göndərildi. Zəhmət olmasa yoxlayın.");
             } catch (error) {
                 console.error("Firebase Error:", error);
                 alert("Qeydiyyat xətası: " + error.message);
@@ -754,16 +969,37 @@
         window.handleVolunteerSignup = async (e) => {
             e.preventDefault();
             if(!currentUser) return;
+            const phone = document.getElementById('volPhone').value;
+            const otpCode = document.getElementById('otpCode').value;
+
+            if(!confirmationResult) {
+                alert("Zəhmət olmasa əvvəlcə nömrəni təsdiqləyin (Kod Göndər).");
+                return;
+            }
+
+            if(!otpCode) {
+                alert("Zəhmət olmasa SMS kodunu daxil edin.");
+                return;
+            }
+
             try {
+                // Confirm OTP
+                await confirmationResult.confirm(otpCode);
+                
+                // Save to DB
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
-                    isVolunteer: true, phone: "555-00-00", role: "volunteer", updatedAt: new Date()
+                    isVolunteer: true, phone: phone, role: "volunteer", updatedAt: new Date(), phoneVerified: true
                 }, { merge: true });
+                
                 isVolunteer = true;
                 enableVolunteerTheme();
                 updateAuthUI();
-                alert("Təbriklər, Siz artıq könüllüsünüz.");
+                alert("Təbriklər, Siz artıq könüllüsünüz! Nömrəniz təsdiqləndi.");
                 router('home');
-            } catch (err) { alert("Xəta baş verdi."); }
+            } catch (err) { 
+                console.error(err);
+                alert("Kod səhvdir və ya xəta baş verdi."); 
+            }
         };
 
         window.acceptTask = (btnElement) => {
